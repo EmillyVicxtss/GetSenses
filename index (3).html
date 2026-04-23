@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>GETSenses — Gerador de Senhas</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --purple-deep: #1a0033;
+    --purple-mid: #3d0070;
+    --purple-bright: #7c2fe8;
+    --purple-light: #a855f7;
+    --purple-glow: #c084fc;
+    --black: #0a0010;
+    --white: #f5f0ff;
+    --green: #39ff88;
+    --red: #ff4466;
+    --text-muted: #9d7dbf;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Syne', sans-serif;
+    background: var(--purple-deep);
+    color: var(--white);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ─── BG PATTERN ─── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 60% at 20% 10%, #4a007080 0%, transparent 60%),
+      radial-gradient(ellipse 60% 80% at 80% 90%, #2d005580 0%, transparent 60%),
+      repeating-linear-gradient(
+        60deg,
+        transparent,
+        transparent 40px,
+        rgba(124,47,232,0.04) 40px,
+        rgba(124,47,232,0.04) 41px
+      );
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .page { position: relative; z-index: 1; }
+
+  /* ─── TYPOGRAPHY ─── */
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: clamp(2rem, 5vw, 3.2rem);
+    color: #000;
+    background: linear-gradient(135deg, #1a0033 0%, #000 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: -1px;
+  }
+
+  .logo-bar {
+    background: #fff;
+    padding: 18px 36px;
+    border-radius: 0 0 28px 28px;
+    display: inline-block;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.4);
+  }
+
+  /* ─── CARD ─── */
+  .card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(168,85,247,0.25);
+    border-radius: 24px;
+    padding: 40px;
+    backdrop-filter: blur(12px);
+    box-shadow: 0 8px 60px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08);
+  }
+
+  /* ─── INPUTS ─── */
+  input[type="text"],
+  input[type="password"],
+  input[type="number"],
+  textarea {
+    width: 100%;
+    background: rgba(0,0,0,0.4);
+    border: 1.5px solid rgba(168,85,247,0.3);
+    border-radius: 12px;
+    padding: 14px 18px;
+    color: var(--white);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.95rem;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  input:focus, textarea:focus {
+    border-color: var(--purple-light);
+    box-shadow: 0 0 0 3px rgba(168,85,247,0.15);
+  }
+  input::placeholder { color: var(--text-muted); }
+
+  label {
+    display: block;
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+  }
+
+  .field { margin-bottom: 20px; }
+
+  /* ─── BUTTONS ─── */
+  .btn {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 0.95rem;
+    padding: 14px 28px;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.03em;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--purple-bright), var(--purple-light));
+    color: #fff;
+    width: 100%;
+    box-shadow: 0 4px 20px rgba(124,47,232,0.4);
+  }
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(124,47,232,0.5);
+  }
+  .btn-secondary {
+    background: rgba(168,85,247,0.12);
+    color: var(--purple-glow);
+    border: 1px solid rgba(168,85,247,0.3);
+  }
+  .btn-secondary:hover {
+    background: rgba(168,85,247,0.22);
+  }
+  .btn-ghost {
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    padding: 8px 14px;
+  }
+  .btn-ghost:hover { color: var(--white); }
+  .btn-danger {
+    background: rgba(255,68,102,0.1);
+    color: var(--red);
+    border: 1px solid rgba(255,68,102,0.25);
+  }
+  .btn-danger:hover { background: rgba(255,68,102,0.2); }
+  .btn-sm { padding: 8px 16px; font-size: 0.82rem; }
+
+  /* ─── TOAST ─── */
+  #toast {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--purple-mid);
+    border: 1px solid var(--purple-light);
+    color: var(--white);
+    padding: 12px 28px;
+    border-radius: 50px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    transition: transform 0.35s cubic-bezier(.16,1,.3,1), opacity 0.35s;
+    opacity: 0;
+    z-index: 9999;
+    white-space: nowrap;
+  }
+  #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+  /* ─── STRENGTH BAR ─── */
+  .strength-bar {
+    height: 5px;
+    border-radius: 99px;
+    background: rgba(255,255,255,0.08);
+    overflow: hidden;
+    margin-top: 10px;
+  }
+  .strength-fill {
+    height: 100%;
+    border-radius: 99px;
+    transition: width 0.4s ease, background 0.4s;
+  }
+
+  /* ─── PASSWORD DISPLAY ─── */
+  .pwd-display {
+    background: rgba(0,0,0,0.5);
+    border: 1.5px solid rgba(168,85,247,0.3);
+    border-radius: 14px;
+    padding: 18px 20px;
+    font-family: 'DM Mono', monospace;
+    font-size: 1.1rem;
+    letter-spacing: 0.05em;
+    color: var(--green);
+    word-break: break-all;
+    min-height: 60px;
+    display: flex;
+    align-items: center;
+    position: relative;
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+  .pwd-display:hover { border-color: var(--purple-light); }
+  .pwd-display .copy-hint {
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    font-family: 'Syne', sans-serif;
+  }
+
+  /* ─── HISTORY ─── */
+  .history-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+  .history-item {
+    background: rgba(0,0,0,0.35);
+    border: 1px solid rgba(168,85,247,0.15);
+    border-radius: 12px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: border-color 0.2s;
+  }
+  .history-item:hover { border-color: rgba(168,85,247,0.4); }
+  .history-item .pwd-text {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.9rem;
+    color: var(--green);
+    flex: 1;
+    word-break: break-all;
+  }
+  .history-item .pwd-date {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+
+  /* ─── CHECKBOX GRID ─── */
+  .checkbox-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .check-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    font-size: 0.88rem;
+    font-weight: 400;
+    color: var(--white);
+    text-transform: none;
+    letter-spacing: 0;
+    padding: 10px 14px;
+    border-radius: 10px;
+    border: 1px solid rgba(168,85,247,0.15);
+    background: rgba(0,0,0,0.2);
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .check-label:hover { border-color: rgba(168,85,247,0.4); background: rgba(124,47,232,0.1); }
+  .check-label input[type="checkbox"] {
+    width: 18px; height: 18px;
+    accent-color: var(--purple-light);
+    flex-shrink: 0;
+  }
+
+  /* ─── NAV ─── */
+  .nav {
+    background: rgba(0,0,0,0.4);
+    border-bottom: 1px solid rgba(168,85,247,0.15);
+    padding: 0 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 64px;
+    backdrop-filter: blur(10px);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .nav-logo { font-size: 1.3rem; font-weight: 800; color: #000; background: #fff; padding: 4px 16px; border-radius: 8px; }
+  .nav-user { display: flex; align-items: center; gap: 12px; font-size: 0.88rem; color: var(--text-muted); }
+  .nav-tabs { display: flex; gap: 4px; }
+  .nav-tab {
+    font-family: 'Syne', sans-serif;
+    font-weight: 600;
+    font-size: 0.85rem;
+    padding: 8px 20px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: transparent;
+    color: var(--text-muted);
+  }
+  .nav-tab.active { background: rgba(168,85,247,0.2); color: var(--purple-glow); }
+  .nav-tab:hover:not(.active) { color: var(--white); }
+
+  /* ─── RANGE ─── */
+  input[type="range"] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 5px;
+    border-radius: 99px;
+    background: linear-gradient(90deg, var(--purple-bright) var(--val, 50%), rgba(255,255,255,0.1) var(--val, 50%));
+    outline: none;
+    border: none;
+    padding: 0;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: var(--purple-light);
+    cursor: pointer;
+    box-shadow: 0 0 10px rgba(168,85,247,0.5);
+  }
+
+  /* ─── LAYOUT PAGES ─── */
+  .page-login {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 20px;
+    gap: 32px;
+  }
+  .page-app { display: none; }
+
+  .container { max-width: 520px; width: 100%; }
+  .container-wide { max-width: 800px; width: 100%; margin: 0 auto; }
+
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  .row { display: flex; gap: 12px; align-items: flex-end; }
+  .row .btn { flex-shrink: 0; }
+
+  .section-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--white);
+    margin-bottom: 6px;
+  }
+  .section-sub {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    margin-bottom: 24px;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 48px 20px;
+    color: var(--text-muted);
+  }
+  .empty-state svg { opacity: 0.3; margin-bottom: 14px; }
+  .empty-state p { font-size: 0.9rem; }
+
+  .badge {
+    display: inline-block;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: 99px;
+    margin-left: 8px;
+  }
+  .badge-green { background: rgba(57,255,136,0.12); color: var(--green); }
+  .badge-yellow { background: rgba(255,200,50,0.12); color: #ffc832; }
+  .badge-red { background: rgba(255,68,102,0.12); color: var(--red); }
+
+  .divider { height: 1px; background: rgba(168,85,247,0.12); margin: 24px 0; }
+
+  .fade-in { animation: fadeIn 0.4s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+  .link-btn {
+    background: none; border: none; cursor: pointer;
+    color: var(--purple-glow); font-family: 'Syne', sans-serif;
+    font-size: 0.9rem; font-weight: 600;
+    text-decoration: underline; text-underline-offset: 3px;
+  }
+  .link-btn:hover { color: var(--white); }
+
+  .app-content { padding: 32px 20px; }
+
+  @media (max-width: 540px) {
+    .checkbox-grid { grid-template-columns: 1fr; }
+    .card { padding: 26px 20px; }
+    .nav { padding: 0 16px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ════════════════ LOGIN PAGE ════════════════ -->
+<div class="page page-login" id="pageLogin">
+  <div style="text-align:center">
+    <div class="logo-bar">
+      <div class="logo">GETSenses</div>
+    </div>
+    <p style="margin-top:14px;color:var(--text-muted);font-size:0.88rem;letter-spacing:0.05em;">Gere. Salve. Proteja.</p>
+  </div>
+
+  <div class="container">
+    <div class="card fade-in" id="loginCard">
+      <div class="section-title" id="formTitle">Entrar na sua conta</div>
+      <p class="section-sub" id="formSub">Acesse seu histórico de senhas seguras.</p>
+
+      <div class="field">
+        <label>Nome de usuário</label>
+        <input type="text" id="loginUser" placeholder="ex: joao123" autocomplete="username"/>
+      </div>
+      <div class="field">
+        <label>Senha de acesso</label>
+        <input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password"/>
+      </div>
+      <div id="loginError" style="color:var(--red);font-size:0.82rem;margin-bottom:14px;display:none;"></div>
+      <button class="btn btn-primary" onclick="handleAuth()">
+        <span id="authBtnText">Entrar</span>
+      </button>
+      <div style="text-align:center;margin-top:18px;font-size:0.88rem;color:var(--text-muted);">
+        <span id="authToggleText">Não tem conta?</span>
+        <button class="link-btn" onclick="toggleMode()" style="margin-left:6px;" id="authToggleBtn">Criar conta</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════ APP PAGE ════════════════ -->
+<div class="page page-app" id="pageApp">
+  <nav class="nav">
+    <div class="nav-logo">GETSenses</div>
+    <div class="nav-tabs">
+      <button class="nav-tab active" onclick="switchTab('generator', this)">🔐 Gerar</button>
+      <button class="nav-tab" onclick="switchTab('history', this)">📋 Histórico</button>
+    </div>
+    <div class="nav-user">
+      <span id="navUsername"></span>
+      <button class="btn btn-ghost btn-sm" onclick="logout()">Sair</button>
+    </div>
+  </nav>
+
+  <div class="app-content">
+    <div class="container-wide">
+
+      <!-- ── GENERATOR TAB ── -->
+      <div class="tab-panel active" id="tab-generator">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start;" class="gen-grid">
+
+          <!-- LEFT: Config -->
+          <div class="card fade-in">
+            <div class="section-title">⚙️ Configurações</div>
+            <p class="section-sub">Personalize como sua senha será gerada.</p>
+
+            <div class="field">
+              <label>Comprimento: <span id="lenVal" style="color:var(--purple-glow);font-weight:700;">16</span></label>
+              <input type="range" id="lengthSlider" min="4" max="128" value="16" oninput="updateLen(this)"/>
+            </div>
+
+            <div class="field">
+              <label>Incluir caracteres</label>
+              <div class="checkbox-grid">
+                <label class="check-label"><input type="checkbox" id="chkUpper" checked/> Maiúsculas (A-Z)</label>
+                <label class="check-label"><input type="checkbox" id="chkLower" checked/> Minúsculas (a-z)</label>
+                <label class="check-label"><input type="checkbox" id="chkNumbers" checked/> Números (0-9)</label>
+                <label class="check-label"><input type="checkbox" id="chkSymbols" checked/> Símbolos (!@#…)</label>
+                <label class="check-label"><input type="checkbox" id="chkSpaces"/> Espaços em branco</label>
+                <label class="check-label"><input type="checkbox" id="chkCustom"/> Personalizado</label>
+              </div>
+            </div>
+
+            <div class="field" id="customCharsField" style="display:none;">
+              <label>Caracteres personalizados</label>
+              <input type="text" id="customChars" placeholder="ex: !?@#$%^&*()_+-=[]{}|;:,./<>?" />
+            </div>
+
+            <div class="field">
+              <label>Prefixo (opcional)</label>
+              <input type="text" id="prefixInput" placeholder="ex: MinhaSenha-" />
+            </div>
+
+            <div class="field">
+              <label>Sufixo (opcional)</label>
+              <input type="text" id="suffixInput" placeholder="ex: -2024" />
+            </div>
+
+            <button class="btn btn-primary" onclick="generatePassword()" style="margin-top:4px;">
+              ✨ Gerar Senha
+            </button>
+          </div>
+
+          <!-- RIGHT: Output -->
+          <div style="display:flex;flex-direction:column;gap:20px;">
+            <div class="card fade-in">
+              <div class="section-title">🔑 Senha Gerada</div>
+              <p class="section-sub">Clique na senha para copiar.</p>
+
+              <div class="pwd-display" onclick="copyGenerated()" id="pwdDisplay" title="Clique para copiar">
+                <span id="pwdText" style="color:var(--text-muted);font-size:0.85rem;">Nenhuma senha gerada ainda…</span>
+                <span class="copy-hint">clique p/ copiar</span>
+              </div>
+
+              <div class="strength-bar" style="margin-top:14px;">
+                <div class="strength-fill" id="strengthFill" style="width:0%;background:var(--red);"></div>
+              </div>
+              <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:0.78rem;color:var(--text-muted);">
+                <span>Força:</span>
+                <span id="strengthLabel">—</span>
+              </div>
+
+              <div class="divider"></div>
+
+              <div class="field">
+                <label>Nome / Rótulo (para salvar)</label>
+                <input type="text" id="pwdLabel" placeholder="ex: Gmail, Banco, Netflix…"/>
+              </div>
+
+              <div style="display:flex;gap:10px;">
+                <button class="btn btn-secondary" style="flex:1" onclick="savePassword()">💾 Salvar no Histórico</button>
+                <button class="btn btn-secondary btn-sm" onclick="generatePassword()" title="Gerar nova">🔄</button>
+              </div>
+            </div>
+
+            <div class="card fade-in">
+              <div class="section-title" style="font-size:0.95rem;">📊 Detalhes</div>
+              <div id="pwdDetails" style="font-family:'DM Mono',monospace;font-size:0.8rem;color:var(--text-muted);line-height:1.8;">
+                Gere uma senha para ver os detalhes.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <style>
+          @media (max-width:700px) {
+            .gen-grid { grid-template-columns: 1fr !important; }
+          }
+        </style>
+      </div>
+
+      <!-- ── HISTORY TAB ── -->
+      <div class="tab-panel" id="tab-history">
+        <div class="card fade-in">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+            <div class="section-title">📋 Histórico de Senhas</div>
+            <button class="btn btn-danger btn-sm" onclick="clearHistory()">🗑 Limpar tudo</button>
+          </div>
+          <p class="section-sub">Senhas salvas para o usuário <strong id="histUser" style="color:var(--purple-glow);"></strong>. Clique na senha para copiar.</p>
+          <div id="historyContainer"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ── TOAST ── -->
+<div id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════
+// STORAGE HELPERS
+// ══════════════════════════════════════════
+const USERS_KEY = 'getsenses_users';
+const SESSION_KEY = 'getsenses_session';
+
+function getUsers() {
+  try { return JSON.parse(localStorage.getItem(USERS_KEY)) || {}; } catch { return {}; }
+}
+function saveUsers(u) { localStorage.setItem(USERS_KEY, JSON.stringify(u)); }
+
+function getSession() {
+  try { return JSON.parse(sessionStorage.getItem(SESSION_KEY)); } catch { return null; }
+}
+function setSession(username) { sessionStorage.setItem(SESSION_KEY, JSON.stringify({ username })); }
+function clearSession() { sessionStorage.removeItem(SESSION_KEY); }
+
+function getUserHistory(username) {
+  const users = getUsers();
+  return (users[username] && users[username].history) ? users[username].history : [];
+}
+function saveUserHistory(username, history) {
+  const users = getUsers();
+  if (!users[username]) users[username] = {};
+  users[username].history = history;
+  saveUsers(users);
+}
+
+// ══════════════════════════════════════════
+// AUTH
+// ══════════════════════════════════════════
+let isRegisterMode = false;
+
+function toggleMode() {
+  isRegisterMode = !isRegisterMode;
+  document.getElementById('formTitle').textContent = isRegisterMode ? 'Criar sua conta' : 'Entrar na sua conta';
+  document.getElementById('formSub').textContent = isRegisterMode
+    ? 'Defina usuário e senha para começar.' : 'Acesse seu histórico de senhas seguras.';
+  document.getElementById('authBtnText').textContent = isRegisterMode ? 'Criar conta' : 'Entrar';
+  document.getElementById('authToggleText').textContent = isRegisterMode ? 'Já tem conta?' : 'Não tem conta?';
+  document.getElementById('authToggleBtn').textContent = isRegisterMode ? 'Entrar' : 'Criar conta';
+  document.getElementById('loginError').style.display = 'none';
+}
+
+function handleAuth() {
+  const username = document.getElementById('loginUser').value.trim();
+  const password = document.getElementById('loginPass').value;
+  const errEl = document.getElementById('loginError');
+
+  if (!username || !password) { showErr('Preencha usuário e senha.'); return; }
+
+  const users = getUsers();
+
+  if (isRegisterMode) {
+    if (users[username]) { showErr('Usuário já existe. Faça login.'); return; }
+    users[username] = { password, history: [] };
+    saveUsers(users);
+    showToast('✅ Conta criada! Entrando…');
+    setTimeout(() => enterApp(username), 600);
+  } else {
+    if (!users[username] || users[username].password !== password) {
+      showErr('Usuário ou senha incorretos.'); return;
+    }
+    enterApp(username);
+  }
+
+  function showErr(msg) {
+    errEl.textContent = msg;
+    errEl.style.display = 'block';
+  }
+}
+
+function enterApp(username) {
+  setSession(username);
+  document.getElementById('pageLogin').style.display = 'none';
+  document.getElementById('pageApp').style.display = 'block';
+  document.getElementById('navUsername').textContent = username;
+  document.getElementById('histUser').textContent = username;
+  renderHistory();
+}
+
+function logout() {
+  clearSession();
+  document.getElementById('pageLogin').style.display = 'flex';
+  document.getElementById('pageApp').style.display = 'none';
+  document.getElementById('loginUser').value = '';
+  document.getElementById('loginPass').value = '';
+}
+
+// ══════════════════════════════════════════
+// GENERATOR
+// ══════════════════════════════════════════
+let generatedPassword = '';
+
+const CHARSETS = {
+  upper:   'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+  lower:   'abcdefghijklmnopqrstuvwxyz',
+  numbers: '0123456789',
+  symbols: '!@#$%^&*()-_=+[]{}|;:\'",.<>?/`~'
+};
+
+function updateLen(el) {
+  const v = parseInt(el.value);
+  document.getElementById('lenVal').textContent = v;
+  const pct = ((v - 4) / (128 - 4)) * 100;
+  el.style.setProperty('--val', pct + '%');
+}
+updateLen(document.getElementById('lengthSlider'));
+
+document.getElementById('chkCustom').addEventListener('change', function() {
+  document.getElementById('customCharsField').style.display = this.checked ? 'block' : 'none';
+});
+
+function generatePassword() {
+  let charset = '';
+  if (document.getElementById('chkUpper').checked)   charset += CHARSETS.upper;
+  if (document.getElementById('chkLower').checked)   charset += CHARSETS.lower;
+  if (document.getElementById('chkNumbers').checked) charset += CHARSETS.numbers;
+  if (document.getElementById('chkSymbols').checked) charset += CHARSETS.symbols;
+  if (document.getElementById('chkSpaces').checked)  charset += ' ';
+  if (document.getElementById('chkCustom').checked) {
+    const custom = document.getElementById('customChars').value;
+    charset += custom;
+  }
+
+  if (!charset) { showToast('⚠️ Selecione ao menos um tipo de caractere.'); return; }
+
+  // Remove duplicates
+  charset = [...new Set(charset)].join('');
+
+  const len = parseInt(document.getElementById('lengthSlider').value);
+  const prefix = document.getElementById('prefixInput').value;
+  const suffix = document.getElementById('suffixInput').value;
+
+  const array = new Uint32Array(len);
+  crypto.getRandomValues(array);
+  let core = '';
+  for (let i = 0; i < len; i++) {
+    core += charset[array[i] % charset.length];
+  }
+
+  generatedPassword = prefix + core + suffix;
+
+  const display = document.getElementById('pwdDisplay');
+  const pwdText = document.getElementById('pwdText');
+  pwdText.style.color = 'var(--green)';
+  pwdText.textContent = generatedPassword;
+
+  updateStrength(generatedPassword);
+  updateDetails(generatedPassword, charset, len, prefix, suffix);
+}
+
+function updateStrength(pwd) {
+  let score = 0;
+  if (pwd.length >= 8)  score++;
+  if (pwd.length >= 14) score++;
+  if (pwd.length >= 20) score++;
+  if (/[A-Z]/.test(pwd))            score++;
+  if (/[a-z]/.test(pwd))            score++;
+  if (/[0-9]/.test(pwd))            score++;
+  if (/[^A-Za-z0-9]/.test(pwd))     score++;
+  if (pwd.length >= 32)              score++;
+
+  const fill = document.getElementById('strengthFill');
+  const label = document.getElementById('strengthLabel');
+
+  const pct = Math.min(100, Math.round((score / 8) * 100));
+  fill.style.width = pct + '%';
+
+  if (score <= 2) {
+    fill.style.background = 'var(--red)';
+    label.innerHTML = 'Fraca <span class="badge badge-red">RUIM</span>';
+  } else if (score <= 4) {
+    fill.style.background = '#ffc832';
+    label.innerHTML = 'Média <span class="badge badge-yellow">OK</span>';
+  } else if (score <= 6) {
+    fill.style.background = '#39d0ff';
+    label.innerHTML = 'Boa <span class="badge badge-green">BOA</span>';
+  } else {
+    fill.style.background = 'var(--green)';
+    label.innerHTML = 'Muito forte <span class="badge badge-green">EXCELENTE</span>';
+  }
+}
+
+function updateDetails(pwd, charset, len, prefix, suffix) {
+  const entropy = Math.floor(len * Math.log2(charset.length));
+  document.getElementById('pwdDetails').innerHTML = `
+    Comprimento total: ${pwd.length} caracteres<br>
+    Núcleo gerado: ${len} caracteres<br>
+    Alfabeto usado: ${charset.length} símbolos<br>
+    Entropia: ~${entropy} bits<br>
+    Prefixo: ${prefix || '—'}<br>
+    Sufixo: ${suffix || '—'}<br>
+    Espaços: ${/\s/.test(pwd) ? 'Sim' : 'Não'}<br>
+  `;
+}
+
+function copyGenerated() {
+  if (!generatedPassword) return;
+  navigator.clipboard.writeText(generatedPassword).then(() => {
+    showToast('📋 Copiado para a área de transferência!');
+  }).catch(() => {
+    // fallback
+    const el = document.createElement('textarea');
+    el.value = generatedPassword;
+    document.body.appendChild(el);
+    el.select();
+    document.execCommand('copy');
+    document.body.removeChild(el);
+    showToast('📋 Copiado!');
+  });
+}
+
+function savePassword() {
+  if (!generatedPassword) { showToast('⚠️ Gere uma senha primeiro!'); return; }
+  const session = getSession();
+  if (!session) return;
+
+  const label = document.getElementById('pwdLabel').value.trim() || 'Sem rótulo';
+  const history = getUserHistory(session.username);
+
+  history.unshift({
+    id: Date.now(),
+    password: generatedPassword,
+    label,
+    date: new Date().toLocaleString('pt-BR')
+  });
+
+  saveUserHistory(session.username, history);
+  showToast('💾 Senha salva no histórico!');
+  document.getElementById('pwdLabel').value = '';
+  renderHistory();
+}
+
+// ══════════════════════════════════════════
+// HISTORY
+// ══════════════════════════════════════════
+function renderHistory() {
+  const session = getSession();
+  if (!session) return;
+  const history = getUserHistory(session.username);
+  const container = document.getElementById('historyContainer');
+
+  if (!history.length) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+        </svg>
+        <p>Nenhuma senha salva ainda.<br>Gere e salve sua primeira senha!</p>
+      </div>`;
+    return;
+  }
+
+  const ul = document.createElement('ul');
+  ul.className = 'history-list';
+
+  history.forEach(item => {
+    const li = document.createElement('li');
+    li.className = 'history-item';
+    li.innerHTML = `
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:0.78rem;font-weight:700;color:var(--purple-glow);margin-bottom:4px;">${escHtml(item.label)}</div>
+        <div class="pwd-text" title="${escHtml(item.password)}">${escHtml(truncate(item.password, 40))}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0;">
+        <span class="pwd-date">${escHtml(item.date)}</span>
+        <div style="display:flex;gap:6px;">
+          <button class="btn btn-secondary btn-sm" onclick="copyHistItem('${escHtml(item.password)}')">Copiar</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteHistItem(${item.id})">✕</button>
+        </div>
+      </div>`;
+    ul.appendChild(li);
+  });
+
+  container.innerHTML = '';
+  container.appendChild(ul);
+}
+
+function copyHistItem(pwd) {
+  navigator.clipboard.writeText(pwd).catch(() => {
+    const el = document.createElement('textarea');
+    el.value = pwd;
+    document.body.appendChild(el);
+    el.select();
+    document.execCommand('copy');
+    document.body.removeChild(el);
+  });
+  showToast('📋 Senha copiada!');
+}
+
+function deleteHistItem(id) {
+  const session = getSession();
+  if (!session) return;
+  let history = getUserHistory(session.username);
+  history = history.filter(h => h.id !== id);
+  saveUserHistory(session.username, history);
+  renderHistory();
+  showToast('🗑 Senha removida.');
+}
+
+function clearHistory() {
+  if (!confirm('Tem certeza? Isso vai apagar todas as senhas salvas.')) return;
+  const session = getSession();
+  if (!session) return;
+  saveUserHistory(session.username, []);
+  renderHistory();
+  showToast('🗑 Histórico limpo.');
+}
+
+// ══════════════════════════════════════════
+// TABS
+// ══════════════════════════════════════════
+function switchTab(name, el) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  el.classList.add('active');
+  if (name === 'history') renderHistory();
+}
+
+// ══════════════════════════════════════════
+// UTILITIES
+// ══════════════════════════════════════════
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._timeout);
+  t._timeout = setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+function escHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+}
+
+function truncate(str, n) {
+  return str.length > n ? str.slice(0, n) + '…' : str;
+}
+
+// Enter key login
+document.getElementById('loginPass').addEventListener('keydown', e => {
+  if (e.key === 'Enter') handleAuth();
+});
+document.getElementById('loginUser').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('loginPass').focus();
+});
+
+// ══════════════════════════════════════════
+// AUTO-LOGIN (session persistence)
+// ══════════════════════════════════════════
+(function init() {
+  const session = getSession();
+  if (session && getUsers()[session.username]) {
+    enterApp(session.username);
+  }
+})();
+</script>
+</body>
+</html>
